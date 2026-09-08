@@ -93,6 +93,8 @@ mkdir -p ~/.dsh/.agent-presets/three-monks
         provider: spawn
         toolName: subagent_executor
         # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below)
+        #     To force a specific provider (instead of inheriting the parent's),
+        #     add a `provider:` line above `model:` (see "Model config").
         agentOptions:
           model: <executor-model-id>
         persona: >-
@@ -103,7 +105,8 @@ mkdir -p ~/.dsh/.agent-presets/three-monks
       config:
         provider: spawn
         toolName: subagent_reviewer
-        # ▼▼▼ FILL IN: a model your provider serves
+        # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below)
+        #     To force a specific provider, add a `provider:` line above `model:`.
         agentOptions:
           model: <reviewer-model-id>
         toolFilter:
@@ -124,19 +127,35 @@ The planner will delegate to `subagent_executor`, then `subagent_reviewer`.
 
 ## Model config (the only thing you edit)
 
-Two `agentOptions.model` lines above are all you change. **You do NOT add a
-`provider` under `agentOptions`** — a `tool-subagent` child inherits the
-parent's provider, so it uses whatever provider the **planner session** is
-running on. You only name the **model id** that provider serves.
+Two `agentOptions` blocks above are all you change. Each holds the **model id**
+that role runs on. The **provider** is optional:
+
+- **Omit `provider`** → the child inherits the **parent's** provider. This is
+  the common case: the child uses whichever provider the **planner session** is
+  running on, so you only name the model. But the model must exist on the
+  planner's provider — otherwise the request fails.
+- **Add `provider: <name>`** → the child uses **that** provider explicitly, and
+  the model must exist there. This is safest when you want the executor/reviewer
+  on a provider that may differ from the planner's.
+
+So the safest, most explicit form is:
+
+```yaml
+agentOptions:
+  provider: <your-provider-name>   # the route id from your settings (e.g. oneapi, openai)
+  model: <model-id>                # a model that provider serves
+```
 
 | What you want | What to write in `agentOptions` |
 |---|---|
-| Child uses the **exact** parent model | omit `agentOptions` entirely |
+| Child uses the **exact** parent route | omit `agentOptions` entirely |
 | Child uses parent **provider**, different **model** | `model: <id>` (no `provider`) |
-| Child uses a **different provider** + model | `provider: <p>` + `model: <id>` |
+| Child uses a **specific provider** + model (safest) | `provider: <p>` + `model: <id>` |
 
-So you **never need a specific provider installed**. If your deployment's
-model catalog exposes a model id, put it here.
+The `provider` value is the route id your deployment's model catalog registers
+(e.g. `oneapi`, `openai`, `deepseek`). You can find the valid ids in your dsh
+settings (`llm-pi-ai.providers.*`); `model` is one of that provider's `models`
+ids.
 
 > **Reviewer may need `bash`.** The reviewer's `toolFilter` above only allows
 > `read`/`grep`/`glob` (read-only). If your review task runs verification
