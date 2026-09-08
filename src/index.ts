@@ -96,7 +96,7 @@ export function apply(ctx: Context, config: Config | undefined): void {
   // guard registers on this plugin's scope (a preset's standing scope), so it
   // observes every agent that composes this preset; `isPlanner` narrows it to
   // the root so children keep their full tool set.
-  if (config.enforcePlannerGuard !== false) {
+  if (config?.enforcePlannerGuard !== false) {
     ctx.on('tools/execute', async (exec, next): Promise<ToolExecutionResult> => {
       if (forbidden.size === 0) return next()
       if (!isPlanner(exec.agent)) return next()
