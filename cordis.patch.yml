@@ -1,0 +1,38 @@
+# dsh-three-monks bundle patch.
+#
+# Inserts the guard plugin row into a profile that already composes a host
+# which provides the `tools` and `systemPrompt` services the plugin injects
+# (e.g. @deepseek-ai/dsh-base). This patch is one layer; the user's own profile
+# cordis.patch.yml may override these rows by id.
+#
+# `forbiddenTools` is the authoritative denylist of tools the planner (root
+# agent) may not execute itself. The `tools/execute` guard returns an isError
+# result without running the tool body, so this is hard enforcement, not
+# guidance. Extend it to cover the deployment's full write/execute surface.
+#
+# The three-role wiring (which model each role uses, which persona it carries,
+# which tools it keeps) lives in an agent-preset `agent.cordis.yml` that
+# registers the `tool-subagent` delegation tools, not here. This bundle only
+# supplies the guard.
+
+- insert:
+    - id: orchestrator-guard
+      name: dsh-three-monks
+      config:
+        # Hard denylist: the planner (root agent) may not run any of these
+        # itself. Every name here is blocked for the ROOT agent; children are
+        # never blocked. Extend to the full write/execute surface.
+        forbiddenTools:
+          - bash
+          - pwsh
+          - edit
+          - write
+          - read
+          - grep
+          - glob
+          - read_image
+
+        # Directory used to word the planner prompt section, relative to cwd.
+        planDir: .dsh
+
+        enforcePlannerGuard: true
