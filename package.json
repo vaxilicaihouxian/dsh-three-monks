@@ -45,7 +45,7 @@
     "@deepseek-ai/dsh-system-prompt": { "optional": true }
   },
   "devDependencies": {
-    "typescript": "file:/Users/machenchi/github/deepseek-harness/node_modules/typescript"
+    "typescript": "^5.4.0"
   },
   "files": [
     "lib/index.js",

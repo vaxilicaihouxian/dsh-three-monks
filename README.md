@@ -102,8 +102,8 @@ running on. You only name the **model id** that provider serves.
 | Child uses parent **provider**, different **model** | `model: <id>` (no `provider`) |
 | Child uses a **different provider** + model | `provider: <p>` + `model: <id>` |
 
-So you **never need a specific provider** (e.g. `oneapi`) installed. If your
-deployment's catalog exposes a model id, put it here.
+So you **never need a specific provider installed**. If your deployment's
+model catalog exposes a model id, put it here.
 
 ## How the guard works
 
