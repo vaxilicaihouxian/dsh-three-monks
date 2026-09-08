@@ -125,9 +125,12 @@ order: 200
         agentOptions:
           model: <reviewer-model-id>
         toolFilter:
-          allow: [read, grep, glob]
+          allow: [read, grep, glob, bash]
         persona: >-
           You are a reviewer subagent. Perform READ-ONLY review.
+          You may use bash only for read-only commands such as git status,
+          git show, git diff, and python-based inspection.
+          Never modify files.
 
 # The guard (from Install step 1).
 - id: orchestrator-guard
@@ -170,11 +173,12 @@ agentOptions:
 `provider` is a route id from your dsh settings (`llm-pi-ai.providers.*`);
 `model` is one of that provider's `models` ids.
 
-> **Reviewer may need `bash`.** The reviewer's `toolFilter` above only allows
-> `read`/`grep`/`glob` (read-only). If your review task runs verification
-> commands (e.g. `git status`, `python3 -m json.tool`), add `bash` to
-> `toolFilter.allow` — otherwise the reviewer is blocked (`not allowed` /
-> `subagent run failed`). The file sandbox still prevents modification.
+> **Reviewer uses `bash` for read-only verification.** The reviewer's
+> `toolFilter.allow` above includes `bash` so it can run read-only verification
+> commands (`git status`, `git show`, `python3 -m json.tool`, etc.) to check the
+> executor's work. The persona and the file sandbox keep it from modifying
+> files. If you do not want the reviewer to run any command, drop `bash` from
+> `toolFilter.allow` (but then it cannot verify with git/python).
 
 ## Troubleshooting
 
