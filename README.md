@@ -85,7 +85,18 @@ write/execute surface:
 
 The guard alone does not create the roles. You pair it with an
 `agent.cordis.yml` preset that registers the delegation tools and the per-role
-model/persona/tool-filter. A minimal example:
+model/persona/tool-filter.
+
+**About per-role models:** a `tool-subagent` child inherits the parent agent's
+provider and model unless `agentOptions` overrides them (see
+`subagent-in-process-driver`). So you usually **omit `agentOptions.provider`** —
+the child uses whatever provider the parent (the planner) is already running
+on, and you only name the `model` you want that role to use. You do **not** need
+any specific provider (e.g. `oneapi`) installed; the child always follows the
+parent's route unless you deliberately override it. To make a role just inherit
+the parent model entirely, omit `agentOptions` altogether.
+
+A minimal example:
 
 ```yaml
 # ~/.dsh/.agent-presets/three-monks/agent.cordis.yml
