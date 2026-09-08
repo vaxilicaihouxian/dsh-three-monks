@@ -48,8 +48,22 @@ Edit `~/.dsh/profiles/<name>/cordis.patch.yml` and add an insert row:
 cd ~/.dsh/profiles/<name> && pnpm install
 ```
 
-Then restart dsh, start a session, and pick the preset described below. The
-bundle's guard (`name: dsh-three-monks`) loads with no extra dependencies.
+Then restart dsh, start a session, and pick the preset described below.
+
+> **The preset's `name` resolves from the harness, not the profile.** The
+> `three-monks` preset (below) loads the guard via `name: dsh-three-monks`. A
+> preset's bare plugin name resolves against the **installed harness**'s
+> package base (`agentCtx.baseUrl`), not the profile's `node_modules`. So the
+> bundle must also be reachable from the harness's `node_modules`. If you run
+> dsh from source (a git clone), symlink it there:
+>
+> ```sh
+> ln -s /path/to/dsh-three-monks /path/to/deepseek-harness/node_modules/dsh-three-monks
+> ```
+>
+> (For an npm-installed dsh, put the bundle in that installation's
+> `node_modules` instead; the exact location is wherever `require('dsh-three-monks')`
+> resolves.)
 
 ## Usage (3 files in 2 minutes)
 
@@ -57,7 +71,16 @@ bundle's guard (`name: dsh-three-monks`) loads with no extra dependencies.
 
 ```sh
 mkdir -p ~/.dsh/.agent-presets/three-monks
-# then edit the file below
+# then create the two files below
+```
+
+Create `~/.dsh/.agent-presets/three-monks/preset.yml` (the roster needs its
+display metadata; without it the preset is not listed as selectable):
+
+```yaml
+name: three-monks（规划者 + 执行 + 审查）
+description: 三方工编排：主 agent 只规划与派发，executor 子 agent 按计划实现，reviewer 子 agent 只读审查。
+order: 200
 ```
 
 ### 2. Paste this `agent.cordis.yml`
