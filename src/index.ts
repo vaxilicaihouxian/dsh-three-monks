@@ -22,7 +22,6 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 // Declaration-merge only: makes `ctx.systemPrompt` visible.
 import type {} from '@deepseek-ai/dsh-system-prompt'
@@ -55,7 +54,7 @@ export interface Config {
    * if a tool sneaks past the first layer, the guard returns an `isError`
    * result without invoking `next()`.
    */
-  forbiddenTools: string[]
+  forbiddenTools?: string[]
   /**
    * Directory (relative to the session cwd) the plan document lives in, used
    * only to word the prompt section. Default `.dsh`.
@@ -64,13 +63,6 @@ export interface Config {
   /** Whether to enforce the guard at all. Default `true`. */
   enforcePlannerGuard?: boolean
 }
-
-/** Schemastery configuration for the orchestrator plugin. */
-export const Config: z<Config> = z.object({
-  forbiddenTools: z.array(z.string()).default([]),
-  planDir: z.string().default('.dsh'),
-  enforcePlannerGuard: z.boolean().default(true),
-})
 
 /** A blocked planner call, carrying the structured `PLANNER_BLOCKED` code. */
 function plannerBlockedResult(toolName: string): ToolExecutionResult {
@@ -94,7 +86,7 @@ function isPlanner(agent: { session: { header: { parentSession?: unknown } } } |
 }
 
 export function apply(ctx: Context, config: Config): void {
-  const forbidden = new Set(config.forbiddenTools)
+  const forbidden = new Set(config.forbiddenTools ?? [])
   const planDir = config.planDir
 
   // ── Hard guard: block the planner from executing forbidden tools.

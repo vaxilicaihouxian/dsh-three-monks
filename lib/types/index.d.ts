@@ -21,7 +21,6 @@
  * @module @dsh-brains/orchestrator
  */
 import type { Context } from '@deepseek-ai/cordis';
-import z from '@deepseek-ai/schemastery';
 /** Cordis plugin name used by loader diagnostics. */
 export declare const name = "orchestrator";
 /** The core service this plugin reads and the seam it wraps. */
@@ -47,7 +46,7 @@ export interface Config {
      * if a tool sneaks past the first layer, the guard returns an `isError`
      * result without invoking `next()`.
      */
-    forbiddenTools: string[];
+    forbiddenTools?: string[];
     /**
      * Directory (relative to the session cwd) the plan document lives in, used
      * only to word the prompt section. Default `.dsh`.
@@ -56,6 +55,4 @@ export interface Config {
     /** Whether to enforce the guard at all. Default `true`. */
     enforcePlannerGuard?: boolean;
 }
-/** Schemastery configuration for the orchestrator plugin. */
-export declare const Config: z<Config>;
 export declare function apply(ctx: Context, config: Config): void;
