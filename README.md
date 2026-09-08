@@ -4,14 +4,13 @@ A [dsh](https://github.com/deepseek-ai/deepseek-harness) profile bundle that
 keeps the **planner** (root agent) from doing concrete work itself — it only
 plans and dispatches. An **executor** child implements each task; a **reviewer**
 child does read-only review. The bundle supplies the guard; you pair it with a
-one-file preset.
+two-file preset.
 
 ## Install
 
-`dsh plugin add <path>` currently trips pnpm's workspace-root check for a
-dependency that lives outside the profile's `packages: [.]` workspace, so
-install the bundle by **cloning it and adding it to the profile by hand**.
-The repo ships `lib/` (compiled), so no build step is needed.
+`dsh plugin add <path>` trips pnpm's workspace-root check for a dependency
+outside the profile's `packages: [.]` workspace, so install by **cloning and
+adding it by hand**. The repo ships `lib/` (compiled) — no build step.
 
 ### 1. Clone the bundle
 
@@ -32,15 +31,19 @@ Edit `~/.dsh/profiles/<name>/package.json` and add `dsh-three-monks` to
 }
 ```
 
-### 3. Register it as a profile bundle
+### 3. Make it resolvable from the installed harness
 
-Edit `~/.dsh/profiles/<name>/cordis.patch.yml` and add an insert row:
+A preset's bare plugin name (`name: dsh-three-monks`) resolves from the
+**installed harness**'s package base (`agentCtx.baseUrl`), not the profile's
+`node_modules`. So the bundle must be reachable from the harness's
+`node_modules`. For a source checkout (a git clone of dsh), symlink it:
 
-```yaml
-- insert:
-    - id: dsh-three-monks
-      name: dsh-three-monks
+```sh
+ln -s /path/to/dsh-three-monks /path/to/deepseek-harness/node_modules/dsh-three-monks
 ```
+
+(For an npm-installed dsh, place the bundle in that installation's
+`node_modules` instead.)
 
 ### 4. Install
 
@@ -48,42 +51,28 @@ Edit `~/.dsh/profiles/<name>/cordis.patch.yml` and add an insert row:
 cd ~/.dsh/profiles/<name> && pnpm install
 ```
 
-Then restart dsh, start a session, and pick the preset described below.
-
-> **The preset's `name` resolves from the harness, not the profile.** The
-> `three-monks` preset (below) loads the guard via `name: dsh-three-monks`. A
-> preset's bare plugin name resolves against the **installed harness**'s
-> package base (`agentCtx.baseUrl`), not the profile's `node_modules`. So the
-> bundle must also be reachable from the harness's `node_modules`. If you run
-> dsh from source (a git clone), symlink it there:
->
-> ```sh
-> ln -s /path/to/dsh-three-monks /path/to/deepseek-harness/node_modules/dsh-three-monks
-> ```
->
-> (For an npm-installed dsh, put the bundle in that installation's
-> `node_modules` instead; the exact location is wherever `require('dsh-three-monks')`
-> resolves.)
+Then restart dsh.
 
 ## Usage (3 files in 2 minutes)
 
-### 1. Create the preset
+### 1. Create the preset directory
 
 ```sh
 mkdir -p ~/.dsh/.agent-presets/three-monks
-# then create the two files below
 ```
 
-Create `~/.dsh/.agent-presets/three-monks/preset.yml` (the roster needs its
-display metadata; without it the preset is not listed as selectable):
+### 2. Create `preset.yml`
+
+The roster needs display metadata; **without it the preset is not listed as
+selectable** (picking it silently falls back to the default):
 
 ```yaml
 name: three-monks（规划者 + 执行 + 审查）
-description: 三方工编排：主 agent 只规划与派发，executor 子 agent 按计划实现，reviewer 子 agent 只读审查。
+description: 三分工编排：主 agent 只规划与派发，executor 子 agent 按计划实现，reviewer 子 agent 只读审查。
 order: 200
 ```
 
-### 2. Paste this `agent.cordis.yml`
+### 3. Create `agent.cordis.yml`
 
 ```yaml
 # ~/.dsh/.agent-presets/three-monks/agent.cordis.yml
@@ -98,6 +87,8 @@ order: 200
       try to call yourself.
 
 # Tools a delegated executor/reviewer needs (so they can actually work).
+# NOTE: `tool-fs-search` REQUIRES `sampleOverCapGlobResults` — without it the
+# preset fails to mount and silently falls back to the default.
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
 - id: tool-fs-search
@@ -117,9 +108,9 @@ order: 200
       config:
         provider: spawn
         toolName: subagent_executor
-        # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below)
-        #     To force a specific provider (instead of inheriting the parent's),
-        #     add a `provider:` line above `model:` (see "Model config").
+        # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below).
+        #     To force a provider (instead of inheriting the parent's), add a
+        #     `provider:` line above `model:`.
         agentOptions:
           model: <executor-model-id>
         persona: >-
@@ -130,8 +121,7 @@ order: 200
       config:
         provider: spawn
         toolName: subagent_reviewer
-        # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below)
-        #     To force a specific provider, add a `provider:` line above `model:`.
+        # ▼▼▼ FILL IN: a model your provider serves (see "Model config" below).
         agentOptions:
           model: <reviewer-model-id>
         toolFilter:
@@ -139,35 +129,35 @@ order: 200
         persona: >-
           You are a reviewer subagent. Perform READ-ONLY review.
 
-# The guard (from step "Install").
+# The guard (from Install step 1).
 - id: orchestrator-guard
   name: 'dsh-three-monks'
   config:
     forbiddenTools: [bash, pwsh, edit, write, read, grep, glob, read_image]
 ```
 
-### 3. Start a session, pick the `three-monks` preset, ask it a task
+### 4. Start a session
 
-The planner will delegate to `subagent_executor`, then `subagent_reviewer`.
+Restart dsh, start a new session, pick the **`three-monks`** preset. The planner
+delegates to `subagent_executor`, then `subagent_reviewer`.
 
 ## Model config (the only thing you edit)
 
-Two `agentOptions` blocks above are all you change. Each holds the **model id**
-that role runs on. The **provider** is optional:
+Two `agentOptions` blocks are all you change. Each holds the **model id** that
+role runs on. The **provider** is optional:
 
-- **Omit `provider`** → the child inherits the **parent's** provider. This is
-  the common case: the child uses whichever provider the **planner session** is
-  running on, so you only name the model. But the model must exist on the
-  planner's provider — otherwise the request fails.
-- **Add `provider: <name>`** → the child uses **that** provider explicitly, and
-  the model must exist there. This is safest when you want the executor/reviewer
-  on a provider that may differ from the planner's.
+- **Omit `provider`** → the child inherits the **parent's** provider. Common
+  case: the child uses whichever provider the **planner session** runs on, so
+  you only name the model. But the model must exist on the planner's provider.
+- **Add `provider: <name>`** → the child uses **that** provider explicitly.
+  Safest when the executor/reviewer should be on a provider different from the
+  planner's.
 
-So the safest, most explicit form is:
+The safest, most explicit form:
 
 ```yaml
 agentOptions:
-  provider: <your-provider-name>   # the route id from your settings (e.g. oneapi, openai)
+  provider: <your-provider-name>   # a route id from your settings (e.g. oneapi, openai)
   model: <model-id>                # a model that provider serves
 ```
 
@@ -177,17 +167,27 @@ agentOptions:
 | Child uses parent **provider**, different **model** | `model: <id>` (no `provider`) |
 | Child uses a **specific provider** + model (safest) | `provider: <p>` + `model: <id>` |
 
-The `provider` value is the route id your deployment's model catalog registers
-(e.g. `oneapi`, `openai`, `deepseek`). You can find the valid ids in your dsh
-settings (`llm-pi-ai.providers.*`); `model` is one of that provider's `models`
-ids.
+`provider` is a route id from your dsh settings (`llm-pi-ai.providers.*`);
+`model` is one of that provider's `models` ids.
 
 > **Reviewer may need `bash`.** The reviewer's `toolFilter` above only allows
 > `read`/`grep`/`glob` (read-only). If your review task runs verification
-> commands (e.g. `git status`, `git show`, `python3 -m json.tool`), add `bash`
-> to `toolFilter.allow` — otherwise the reviewer is blocked with
-> `not allowed` / `subagent run failed` and cannot verify the work. The file
-> sandbox still prevents it from modifying files.
+> commands (e.g. `git status`, `python3 -m json.tool`), add `bash` to
+> `toolFilter.allow` — otherwise the reviewer is blocked (`not allowed` /
+> `subagent run failed`). The file sandbox still prevents modification.
+
+## Troubleshooting
+
+- **Preset silently falls back to the default (standard) mode.** Usually a
+  missing required config. The common one: `tool-fs-search` needs
+  `config: { sampleOverCapGlobResults: false }` (see above). Other causes: the
+  preset has no `preset.yml` (so it is not listed), or `dsh-three-monks` is not
+  resolvable from the harness (see Install step 3).
+- **`dsh plugin add <path>` fails with `ADDING_TO_ROOT`.** A dsh CLI limitation
+  for a dependency outside the profile's `packages: [.]` workspace. Use the
+  manual install above.
+- **`Cannot read properties of undefined (reading 'forbiddenTools')`.** An older
+  bundle. Fetch the latest — `apply()` now tolerates an absent `config`.
 
 ## How the guard works
 
