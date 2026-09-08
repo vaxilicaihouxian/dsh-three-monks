@@ -55,4 +55,4 @@ export interface Config {
     /** Whether to enforce the guard at all. Default `true`. */
     enforcePlannerGuard?: boolean;
 }
-export declare function apply(ctx: Context, config: Config): void;
+export declare function apply(ctx: Context, config: Config | undefined): void;

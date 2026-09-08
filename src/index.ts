@@ -85,9 +85,9 @@ function isPlanner(agent: { session: { header: { parentSession?: unknown } } } |
   return agent !== undefined && agent.session.header.parentSession === undefined
 }
 
-export function apply(ctx: Context, config: Config): void {
-  const forbidden = new Set(config.forbiddenTools ?? [])
-  const planDir = config.planDir
+export function apply(ctx: Context, config: Config | undefined): void {
+  const forbidden = new Set(config?.forbiddenTools ?? [])
+  const planDir = config?.planDir
 
   // ── Hard guard: block the planner from executing forbidden tools.
   //
