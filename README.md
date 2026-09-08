@@ -8,15 +8,48 @@ one-file preset.
 
 ## Install
 
+`dsh plugin add <path>` currently trips pnpm's workspace-root check for a
+dependency that lives outside the profile's `packages: [.]` workspace, so
+install the bundle by **cloning it and adding it to the profile by hand**.
+The repo ships `lib/` (compiled), so no build step is needed.
+
+### 1. Clone the bundle
+
 ```sh
-dsh plugin --profile <name> add dsh-three-monks
+git clone https://github.com/vaxilicaihouxian/dsh-three-monks /path/to/dsh-three-monks
 ```
 
-Or from git:
+### 2. Register it as a profile dependency
+
+Edit `~/.dsh/profiles/<name>/package.json` and add `dsh-three-monks` to
+`dependencies`:
+
+```json
+{
+  "dependencies": {
+    "dsh-three-monks": "link:/path/to/dsh-three-monks"
+  }
+}
+```
+
+### 3. Register it as a profile bundle
+
+Edit `~/.dsh/profiles/<name>/cordis.patch.yml` and add an insert row:
+
+```yaml
+- insert:
+    - id: dsh-three-monks
+      name: dsh-three-monks
+```
+
+### 4. Install
 
 ```sh
-dsh plugin --profile <name> add github:vaxilicaihouxian/dsh-three-monks
+cd ~/.dsh/profiles/<name> && pnpm install
 ```
+
+Then restart dsh, start a session, and pick the preset described below. The
+bundle's guard (`name: dsh-three-monks`) loads with no extra dependencies.
 
 ## Usage (3 files in 2 minutes)
 
@@ -104,6 +137,13 @@ running on. You only name the **model id** that provider serves.
 
 So you **never need a specific provider installed**. If your deployment's
 model catalog exposes a model id, put it here.
+
+> **Reviewer may need `bash`.** The reviewer's `toolFilter` above only allows
+> `read`/`grep`/`glob` (read-only). If your review task runs verification
+> commands (e.g. `git status`, `git show`, `python3 -m json.tool`), add `bash`
+> to `toolFilter.allow` — otherwise the reviewer is blocked with
+> `not allowed` / `subagent run failed` and cannot verify the work. The file
+> sandbox still prevents it from modifying files.
 
 ## How the guard works
 
