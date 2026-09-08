@@ -102,6 +102,8 @@ order: 200
   name: '@deepseek-ai/dsh-tool-fs'
 - id: tool-fs-search
   name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
 
