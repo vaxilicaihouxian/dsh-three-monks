@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "tsc -p tsconfig.json"
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dsh": {
     "bundle": {
