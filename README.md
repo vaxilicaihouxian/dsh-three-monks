@@ -85,18 +85,25 @@ write/execute surface:
 
 The guard alone does not create the roles. You pair it with an
 `agent.cordis.yml` preset that registers the delegation tools and the per-role
-model/persona/tool-filter.
+model/persona/tool-filter. Here is the whole flow.
 
-**About per-role models:** a `tool-subagent` child inherits the parent agent's
-provider and model unless `agentOptions` overrides them (see
-`subagent-in-process-driver`). So you usually **omit `agentOptions.provider`** —
-the child uses whatever provider the parent (the planner) is already running
-on, and you only name the `model` you want that role to use. You do **not** need
-any specific provider (e.g. `oneapi`) installed; the child always follows the
-parent's route unless you deliberately override it. To make a role just inherit
-the parent model entirely, omit `agentOptions` altogether.
+### 1. Install the bundle into a profile
 
-A minimal example:
+```sh
+dsh plugin --profile <name> add dsh-three-monks
+```
+
+This registers the `dsh-three-monks` guard (a `tools/execute` handler) on the
+profile. It does nothing by itself yet — you still create the roles in a preset.
+
+### 2. Create an agent preset
+
+Make a directory under your user presets and add an `agent.cordis.yml`:
+
+```sh
+mkdir -p ~/.dsh/.agent-presets/three-monks
+# edit ~/.dsh/.agent-presets/three-monks/agent.cordis.yml
+```
 
 ```yaml
 # ~/.dsh/.agent-presets/three-monks/agent.cordis.yml
@@ -110,6 +117,7 @@ A minimal example:
       (subagent_reviewer). Delegate everything; the guard blocks any tool you
       try to call yourself.
 
+# The concrete-work tools a delegated executor/reviewer needs.
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
 
@@ -119,6 +127,7 @@ A minimal example:
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
 
+# The two delegation tools, one per role.
 - id: delegation
   name: cordis:group
   group: true
@@ -129,7 +138,7 @@ A minimal example:
         provider: spawn
         toolName: subagent_executor
         agentOptions:
-          model: <your-executor-model>
+          model: <executor-model-id>   # <-- your provider's model id
         persona: >-
           You are an executor subagent. Implement exactly the task assigned.
 
@@ -139,17 +148,49 @@ A minimal example:
         provider: spawn
         toolName: subagent_reviewer
         agentOptions:
-          model: <your-reviewer-model>
+          model: <reviewer-model-id>   # <-- your provider's model id
         toolFilter:
           allow: [read, grep, glob]
         persona: >-
           You are a reviewer subagent. Perform READ-ONLY review.
 
+# The guard. `dsh-three-monks` must be installable (see step 1).
 - id: orchestrator-guard
-  name: 'dsh-three-monks'          # the bundle's guard
+  name: 'dsh-three-monks'
   config:
     forbiddenTools: [bash, pwsh, edit, write, read, grep, glob, read_image]
 ```
+
+### 3. Fill in the model ids
+
+Put a **model id your provider serves** in each `agentOptions.model`. You do
+**not** add a `provider` under `agentOptions` — a `tool-subagent` child inherits
+the parent's provider, so it uses whichever provider the **planner** session is
+already running on. This is the key point:
+
+- Omit `agentOptions.provider` (or the whole `agentOptions`) → the child uses
+  the **parent's** provider and model.
+- Set only `agentOptions.model` → the child uses the **parent's** provider with
+  **that** model.
+- Set `agentOptions.provider` + `agentOptions.model` → the child uses **that**
+  provider with **that** model (only if you deliberately want a different
+  provider than the parent).
+
+So you never need a specific provider (e.g. `oneapi`) installed. If your
+deployment's model catalog exposes an id, put it here.
+
+### 4. Start a session on the preset
+
+New session → pick the **`three-monks`** preset. The planner (root) is guarded;
+`subagent_executor` and `subagent_reviewer` appear as tools. Ask the planner to
+do a task and it will delegate to the executor, then the reviewer.
+
+### How the per-role model resolves
+
+The child's provider/model come from `agentOptions` **overlaid on the parent's
+route** (see `subagent-in-process-driver` / `resolveChildAgentOptions`). This is
+why you can run the executor and reviewer on different models than the planner
+without touching any provider config.
 
 ## How the guard identifies the planner
 
